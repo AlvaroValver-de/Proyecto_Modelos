@@ -23,9 +23,12 @@ MatDouble mD; //matriz distancia entre baricentros
 MatDouble mTV;//matriz tiempo de vuelo entre baricentros
 MatDouble mAS; //matriz angulos solidos
 MatDouble mPE; //matriz porcentage de energia
+MatDouble mET; //matriz porcentage de energia
+
 int NumTri = 0;
 source s;
 float speed = 0.3; //Velocidad de movimiento de la animacion
+float alfa = 0.5;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -203,6 +206,30 @@ int main()
     }
 
     reflection arrayDePuntosDeIncidencia = arrayreflecciones[1];
+
+    mET.Init(NumTri, 1000);
+
+    //Transicion de energia
+    for (int t = 0; t < 100; t++) {
+        for (int e = 0; e < NumTri; e++) {
+            for (int ed = 0; ed < NumTri; ed++) {
+                if (e != ed && mPE.A[e][ed] != 0) {
+                    int tv = mTV.A[e][ed];
+                    if ((t + tv) <= 10) {
+                        mET.A[t + tv][ed] += mET.A[t][e] * mPE.A[e][ed]*(1- alfa);
+                    }
+                }
+            }
+        }
+    }
+
+
+        for (int i = 0; i < mD.m; i++) {
+            for (int j = 0; j < mD.n; j++) {
+                std::cout << mET.A[i][j] << " ";
+            }
+            std::cout << std::endl;
+        }
 
 
     int nPunto = 0;
@@ -661,14 +688,6 @@ void laodRoom() {
                 }
                 cont++;
 
-
-                /* // Cálculo de las distancias, tiempo de vuelo y porcentajes de receptores
-                 for (int m = 0; m < r.NR; m++) {
-                     matRecDist.d[m][idTri1] = r.r[m].p.distancia(r.p[i].t[j].bc); //Cálculo de la distancia de la posición del receptor al baricentro de los triangulosde la sala
-                     matRecTime.i[m][idTri1] = int(1000 * matRecDist.d[m][idTri1] / V_SON); //Cálculo del tiempo de vuelo entre el receptor y el baricentro de los triangulos de la sala
-                     matRecAngles.d[m][idTri1] = r.r[m].solidAngle(r.p[i].t[j].bc); // Cálculo del ángulo solido entre el receptor y el baricentro de los triangulos de la sala
-                 }*/
-
             }
         }
 
@@ -686,20 +705,19 @@ void laodRoom() {
    
         for (int i = 0; i < NumTri; i++) {
             for (int j = 0; j < NumTri; j++) {
-               /// std::cout << suma_angulos_solidos[i] << "                  ";
                 mPE.A[i][j] = mAS.A[i][j] / suma_angulos_solidos[i];
             }
         }
 
         
-        /**/
+        
         for (int i = 0; i < mD.m; i++) {
             for (int j = 0; j < mD.n; j++) {
                 std::cout << mPE.A[i][j] << " ";
             }
             std::cout << std::endl;
         }
-
+        
     }
 
 
