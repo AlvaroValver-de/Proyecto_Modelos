@@ -537,6 +537,7 @@ void energytransition() {
 
         mE.Init(NumTri, tM); //inicializacion de la matriz de energia
 
+        //Difusion de la energia en los triangulos
         for (int r = 0; r < N_RAYOS; r++)
         {
             eneResidual = eneRayo;
@@ -546,7 +547,7 @@ void energytransition() {
                 int tri = arrayreflecciones[r].idTriangle[re];
                 if (tri >= 0 && tri < NumTri)
                 {
-                    int tim = int((arrayreflecciones[r].d[re+1] - arrayreflecciones[r].d[re]));
+                    int tim = int((arrayreflecciones[r].d[re+1] - arrayreflecciones[r].d[re])/v_son);
                     if (tim >= 0 && tim < tM)
                     {
                         mE.A[tri][tim] += (eneResidual * (1 - alfa) * delta);
