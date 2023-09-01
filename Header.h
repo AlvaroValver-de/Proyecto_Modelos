@@ -443,28 +443,15 @@ public:
     }
 };
 //---------------------------------------------------------------------------
+// Estructura para almacenar información sobre reflexiones
 struct reflection {
-    point r[MaxNPoints];                    // Puntos de aplicación.
-    double d[MaxNPoints];                   // Distancia entre puntos consecutivos.
-    int idTriangle[MaxNPoints];             // ID único del triángulo por cuarto donde se reflejó.
-    int Plane[MaxNPoints];                  // Número del plano por cuarto donde se reflejó.
-    int Triangle[MaxNPoints];               // Número del triángulo por plano donde se reflejó.
-    int N;                                  // Número de reflexiones.
-    bool lost;                              // Si es true, corresponde a la reflexión de un rayo perdido.
-    int Ray;                                // Número de RAYO en la prevista.
-
-    //constructor para inicializar las variables.
-    reflection() : N(0), lost(false), Ray(0) {
-        for (int i = 0; i < MaxNPoints; ++i) {
-            r[i] = point();
-            d[i] = 0.0;
-            idTriangle[i] = -1; // -1 como valor por defecto para indicar que no hay ID asociado.
-            Plane[i] = -1;      // Similar para el plano.
-            Triangle[i] = -1;   // Y para el triángulo.
-        }
-    }
-    reflection(int n, point pt, double d, bool ls, int ray)
-        : N(n), r{ pt }, d{ d }, lost(ls), Ray(ray) {}  // asumiendo que esos son los nombres de los miembros
+    bool lost;        // Bandera para rayos perdidos
+    point r[51];      // Posiciones de reflexión (máximo 50 reflexiones)
+    double d[51];     // Distancias para las reflexiones
+    int idTriangle[51];
+    int Plane[51];
+    int Triangle[51];
+    int N;            // Número de reflexiones
 };
 //---------------------------------------------------------------------------
 class room {
@@ -481,11 +468,41 @@ public:
         distMax = 0.0;
     }
 
-    void clear() {
-        NP = 0;
-        p = NULL;
-        NR = 0;
-        distMax = 0.0;
+   
+
+    double IntersectionDistance(vector1 n, point pnt, vector1 u, point o) {
+        double m = n * u;
+        if (fabs(m) < 1e-6) return -1;
+        return (n * (pnt - o)) / m;
+    }
+
+    void MaxDistance() {
+        distMax = 0;
+        float tmpd = 0;
+        for (int i1 = 0; i1 < NP; i1++) {
+            for (int j1 = 0; j1 < p[i1].NP; j1++) {
+                for (int i2 = 0; i2 < NP; i2++) {
+                    for (int j2 = 0; j2 < p[i2].NP; j2++) {
+                        tmpd = p[i1].p[j1].distancia(p[i2].p[j2]);
+                        if (distMax < tmpd)
+                            distMax = tmpd;
+                    }
+                }
+            }
+        }
+    };
+
+    void NewPlanes(int N) {
+        plane* tp = new plane[NP + N];
+        for (int P = 0; P < NP; P++) {
+            tp[P] = std::move(p[P]);
+        }
+        for (int P = NP; P < NP + N; P++) {
+            tp[P].Clear();
+        }
+        delete[] p;
+        p = tp;
+        NP += N;
     }
 
     bool Inner(point p, triangle t) {
@@ -525,158 +542,102 @@ public:
 
     };
 
-    double IntersectionDistance(vector1 n, point pnt, vector1 u, point o) {
-        double m = n * u;
-        if (fabs(m) < 1e-6) return -1;
-        return (n * (pnt - o)) / m;
+    // Función para calcular la reflexión de un vector incidente respecto a una normal
+    vector1 Reflect(vector1 incident, vector1 normal) {
+        // Calcular el producto punto entre el vector incidente y la normal
+        double dotProduct = incident.x * normal.x + incident.y * normal.y + incident.z * normal.z;
+
+        // Calcular el vector de reflexión usando la fórmula R = I - 2 * (I · N) * N
+        vector1 reflection;
+        reflection.x = incident.x - 2 * dotProduct * normal.x;
+        reflection.y = incident.y - 2 * dotProduct * normal.y;
+        reflection.z = incident.z - 2 * dotProduct * normal.z;
+
+        return reflection;
     }
 
-    void MaxDistance() {
-        distMax = 0;
-        float tmpd = 0;
-        for (int i1 = 0; i1 < NP; i1++) {
-            for (int j1 = 0; j1 < p[i1].NP; j1++) {
-                for (int i2 = 0; i2 < NP; i2++) {
-                    for (int j2 = 0; j2 < p[i2].NP; j2++) {
-                        tmpd = p[i1].p[j1].distancia(p[i2].p[j2]);
-                        if (distMax < tmpd)
-                            distMax = tmpd;
-                    }
-                }
-            }
-        }
-    };
 
-    void NewPlanes(int N) {
-        plane* tp = new plane[NP + N];
-        for (int P = 0; P < NP; P++) {
-            tp[P] = std::move(p[P]);
-        }
-        for (int P = NP; P < NP + N; P++) {
-            tp[P].Clear();
-        }
-        delete[] p;
-        p = tp;
-        NP += N;
-    }
+    // Función que realiza el Ray Tracing en una escena y devuelve un array de reflexiones
+    reflection* RayTracing(point origin, vector1* rays, int numRays) {
+        reflection* reflections = new reflection[numRays];
 
-    // Esta función realiza el Ray Tracing en una escena y devuelve un array de reflexiones.
-    reflection* RayTracing(point point_origen, vector1* Rays, int NRAYS) {
-        // Puntero a un array de reflexiones.
-        reflection* ry = new reflection[NRAYS];
+        // Iterar a través de cada rayo en el conjunto de rayos
+        for (int rayIdx = 0; rayIdx < numRays; rayIdx++) {
+            vector1 ray = rays[rayIdx];
 
-        // Variables de control e identificación de intersecciones.
-        int IntersectedPlane = -1, IntersectedTriangle = -1, IntersectedTriangleId = -1;
-        int NReflections = 0, TNReflections = 0, LostRays = 0;
+            // Inicializar la estructura de reflexión para el rayo actual
+            reflections[rayIdx] = { false };
 
-        // Variables para almacenar distancias.
-        double d1, d2;
+            point currentPoint = origin;
+            int numReflections = 0;
 
-        // Puntos para trabajar con intersecciones y reflexiones.
-        point p1, p2, p3;
+            // Realizar el trazado de rayos mientras el número de reflexiones sea menor a 50
+            while (numReflections < 50) {
+                double minDistance = std::numeric_limits<double>::max();
+                int intersectedPlane = -1;
+                int intersectedTriangle = -1;
+                int intersectedTriangleId = -1;
 
-        // Control para detener el trazado de un rayo.
-        bool Stop;
+                // Iterar a través de cada plano en la escena
+                for (int planeIdx = 0; planeIdx < NP; planeIdx++) {
+                    plane plane = p[planeIdx];
 
-        // Vector incidente y su punto de origen.
-        vector1 v;
-        point o = point_origen;
+                    // Comprobar si el rayo se encuentra en el lado correcto del plano
+                    if (plane.n.x * ray.x + plane.n.y * ray.y + plane.n.z * ray.z < 0) {
+                        double distance = IntersectionDistance(plane.n, plane.p[0], ray, currentPoint);
 
-        // Determinar la máxima distancia entre puntos en la escena.
-        MaxDistance();
+                        // Verificar si hay una intersección válida
+                        if (distance > 0.000001 && distance < minDistance) {
+                            point intersectionPoint;
+                            intersectionPoint.x = currentPoint.x + ray.x * distance;
+                            intersectionPoint.y = currentPoint.y + ray.y * distance;
+                            intersectionPoint.z = currentPoint.z + ray.z * distance;
 
-        // Bucle principal que procesa cada rayo en el conjunto de rayos.
-        for (int R = 0; R < NRAYS; R++) {
-            v = Rays[R];  // Toma el rayo actual de la lista.
-
-            // Inicializa valores para el rayo actual.
-            ry[R] = reflection(0, point_origen, 0.0, false, R);
-
-            Stop = false;
-
-            // Bucle que maneja reflexiones.
-            while (!Stop) {
-                d1 = distMax;  // Establece la distancia máxima inicial.
-
-                // Bucle que recorre cada plano en la escena.
-                for (int P = 0; P < NP; P++) {
-                    if ((p[P].n * v) < 0) {  // Chequea si el rayo puede intersectar el plano.
-                        d2 = IntersectionDistance(p[P].n, p[P].p[0], v, o);
-
-                        // Comprueba si hay una intersección válida con el plano.
-                        if ((d2 > 0.0) && (d2 < d1)) {
-                            p2 = o + (v * d2);  // Calcula el punto de intersección.
-
-                            // Recorre cada triángulo en el plano.
-                            for (int T = 0; T < p[P].NT; T++) {
-                                if (Inner(p2, p[P].t[T])) {  // Chequea si el punto está dentro del triángulo.
-                                    d1 = d2;
-                                    p1 = p2;
-
-                                    // Almacena los detalles de intersección.
-                                    IntersectedPlane = P;
-                                    IntersectedTriangle = T;
-                                    IntersectedTriangleId = p[P].t[T].ID;
-                                    T = p[P].NT;  // Termina el bucle de triángulos.
+                            // Verificar si el punto de intersección está dentro de un triángulo
+                            for (int triIdx = 0; triIdx < plane.NT; triIdx++) {
+                                if (Inner(intersectionPoint, plane.t[triIdx])) {
+                                    minDistance = distance;
+                                    currentPoint = intersectionPoint;
+                                    intersectedPlane = planeIdx;
+                                    intersectedTriangle = triIdx;
+                                    intersectedTriangleId = plane.t[triIdx].ID;
+                                    break;
                                 }
                             }
                         }
                     }
                 }
 
-                // Si encontramos una intersección.
-                if (d1 < distMax && IntersectedPlane != -1) {
-                    p3 = o;
-                    o = p1;
+                // Verificar si se encontró una intersección válida
+                if (minDistance < std::numeric_limits<double>::max()) {
+                    // Almacenar información sobre la reflexión
+                    reflections[rayIdx].r[numReflections] = currentPoint;
+                    reflections[rayIdx].d[numReflections] = minDistance;
+                    reflections[rayIdx].idTriangle[numReflections] = intersectedTriangleId;
+                    reflections[rayIdx].Plane[numReflections] = intersectedPlane;
+                    reflections[rayIdx].Triangle[numReflections] = intersectedTriangle;
+                    reflections[rayIdx].N = numReflections + 1;
 
-                    // Calcula el vector reflejado.
-                    v = (v - (p[IntersectedPlane].n * (v * p[IntersectedPlane].n * 2))).Normal();
+                    // Calcular la dirección reflejada del rayo y actualizar el número de reflexiones
+                    ray = Reflect(ray, p[intersectedPlane].n).Normal();
+                    numReflections++;
 
-                    NReflections++;
-                    TNReflections += NReflections;
-
-                    // Almacena detalles de la reflexión.
-                    ry[R].r[NReflections] = p1;
-                    ry[R].d[NReflections] = (p1 - p3).Module();
-                    ry[R].idTriangle[NReflections] = IntersectedTriangleId;
-                    ry[R].Plane[NReflections] = IntersectedPlane;
-                    ry[R].Triangle[NReflections] = IntersectedTriangle;
-                    ry[R].N = NReflections;
-
-                    // Limita el número de reflexiones a 50.
-                    if (NReflections > 50) {
-                        ResetIntersectedValues(IntersectedPlane, IntersectedTriangle, IntersectedTriangleId);
-                        Stop = true;
+                    // Verificar si se alcanzó el límite máximo de reflexiones
+                    if (numReflections > 50) {
+                        break;
                     }
                 }
-                else {  // Si no hay intersección.
-                    HandleNoIntersection(NReflections, LostRays, ry, R, o, v, Stop);
-                    ResetIntersectedValues(IntersectedPlane, IntersectedTriangle, IntersectedTriangleId);
+                else {
+                    // Si no se encontró una intersección, marcar el rayo como perdido
+                    reflections[rayIdx].lost = true;
+                    break;
                 }
             }
         }
 
-        return ry;  // Devuelve el array de reflexiones.
-    };
-
-    // Función para resetear los valores de intersección.
-    void ResetIntersectedValues(int& IntersectedPlane, int& IntersectedTriangle, int& IntersectedTriangleId) {
-        IntersectedPlane = -1;
-        IntersectedTriangle = -1;
-        IntersectedTriangleId = -1;
+        // Devolver el array de reflexiones
+        return reflections;
     }
-
-    // Función para manejar casos donde no hay intersección.
-    void HandleNoIntersection(int& NReflections, int& LostRays, reflection* ry, int R, point& o, vector1& v, bool& Stop) {
-        NReflections++;
-        ry[R].lost = true;
-        point p3 = o + (v * distMax);
-        ry[R].r[NReflections] = p3;
-        ry[R].N = NReflections;
-        LostRays++;
-        Stop = true;
-    }
-
 
 };
 //---------------------------------------------------------------------------
