@@ -35,7 +35,7 @@ int tM = 1000; //tiempo de simulacion en unidad discreta
 double v_son = 340.0; //velocidad de transmisión de 340 m/s (constante V_SON)
 reflection* arrayreflecciones = NULL; //Refleciones
 point o ; //Punto de origen
-float simulationInterval = 0.5f;
+float simulationInterval = 0.00625f;
 point** arrayRec;
 
 
@@ -179,31 +179,35 @@ int main()
     // Difusión de la energía en los triángulos
     for (int r = 0; r < N_RAYOS; r++) {
         double distAcum = 0;
-
         int tiempo = 0;
         for (int re = 0; re < 50; re++) {
             int tri = arrayreflecciones[r].idTriangle[re];
             distAcum += arrayreflecciones[r].d[re];
-
-
-
             int tim = int(1000 * distAcum / v_son);
-
-
-            impactosPorTriangulo[tri][tim] = 1;
-
+            impactosPorTriangulo[tri][tim] += 1;
             tiempo = tim;
         }
     }
+    int* maxImpTri = new int[NumTri]();
 
-    std::cout << "Matriz de energia" << std::endl;
     for (int i = 0; i < NumTri; i++) {
-        for (int j = 0; j < 10; j++) {
-            std::cout << impactosPorTriangulo[i][j] << " ";
+        for (int j = 1; j < tM; j++) {
+            if (i == 0) {
+                impactosPorTriangulo[i][j] = (impactosPorTriangulo[i][j] / 3) + impactosPorTriangulo[i][j - 1];
+            }
+            else {
+                impactosPorTriangulo[i][j] = impactosPorTriangulo[i][j] + impactosPorTriangulo[i][j - 1];
+            }
+            maxImpTri[i] = impactosPorTriangulo[i][j];
         }
-        std::cout << std::endl;
     }
 
+    for (int i = 0; i < NumTri; i++) {
+        for (int j = 990; j < tM; j++) {
+            printf("%d ", impactosPorTriangulo[i][j]);
+        }
+        printf("\n");
+    }
     // render loop
     while (!glfwWindowShouldClose(window))
     {
@@ -243,20 +247,22 @@ int main()
 
         for (int i = 0; i < NumTri; i++) {
             // Configura el color calculado en el shader
-            if (impactosPorTriangulo[i][tSimulacion] == 1)
-            {
-                room.setVec3("ourColor", 1.0f, 1.0f, 0.0f);
-            }
-            else {
-                room.setVec3("ourColor", 1.0f, 1.0f, 1.0f);
-            }
+            
+            // Obtén el color calculado en función del número de impactos y el valor máximo de impactos
+
+            Color triangleColor = Color::heatMapColor(impactosPorTriangulo[i][tSimulacion], maxImpTri[i]);
+
+
+            // Configura el color calculado en el shader
+            room.setVec3("ourColor", glm::vec3(triangleColor.red, triangleColor.green, triangleColor.blue));
+          
             room.setMat4("projection", projection);
             room.setMat4("view", view);
            
             room.setMat4("model", model);
             // render the cube
             glBindVertexArray(cubeVAO);
-            glDrawArrays(GL_TRIANGLES, i * 3, 3); // Asume que los triángulos están organizados en grupos de 3 vértices consecutivos
+            glDrawArrays(GL_TRIANGLES, i * 3, 3); 
         }
        
         //Dibujar la fuente
@@ -276,7 +282,7 @@ int main()
                 arrayRec[idRayo][tSimulacion].y,
                 arrayRec[idRayo][tSimulacion].z));
             
-            model = glm::scale(model, glm::vec3(0.01f)); // Tamaño del cubo pequeño
+            model = glm::scale(model, glm::vec3(0.025f)); // Tamaño del cubo pequeño
             rayo.setMat4("model", model);
 
             // Render the cube for the current ray
