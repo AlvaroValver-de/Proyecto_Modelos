@@ -825,7 +825,36 @@ public:
         }
     }
 };
+//----------------------------------------------------------------------------
+class Color {
+public:
+    float red;
+    float green;
+    float blue;
 
+    // Constructor
+    Color(float r, float g, float b) : red(r), green(g), blue(b) {}
+
+    static Color heatMapColor(float value, float maxValue) {
+        // Escala el valor entre 0 y 1
+        float normalizedValue = value / maxValue;
+
+        float r = 0.0f;
+        float g = 0.0f;
+        float b = 0.0f;
+
+        // Asigna colores en función del valor normalizado
+        r = normalizedValue;      // Rojo
+        g = 1.0f - normalizedValue; // Verde
+        b = 1.0f - normalizedValue; // Azul
+
+        return Color(r, g, b);
+    }
+
+
+
+
+};
 
 //---------------------------------------------------------------------------
 class receptor {
