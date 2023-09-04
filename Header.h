@@ -8,6 +8,8 @@
 // Librerías estándar necesarias para el código.
 #include <stdio.h>
 #include <math.h>
+#include <glm/glm.hpp>
+
 
 // Establece el espacio de nombres a utilizar, en este caso 'std'.
 using namespace std;
@@ -446,8 +448,8 @@ public:
 // Estructura para almacenar información sobre reflexiones
 struct reflection {
     bool lost;        // Bandera para rayos perdidos
-    point r[51];      // Posiciones de reflexión (máximo 50 reflexiones)
-    double d[51];     // Distancias para las reflexiones
+    point r[50];      // Posiciones de reflexión (máximo 50 reflexiones)
+    double d[50];     // Distancias para las reflexiones
     int idTriangle[51];
     int Plane[51];
     int Triangle[51];
@@ -823,6 +825,38 @@ public:
         }
     }
 };
+
+
+
+class Color {
+public:
+    // Constructor que toma un valor de intensidad entre 0 y 1
+    Color(float intensity) : intensity(intensity) {}
+
+    // Obtener el color en función de la intensidad (de blanco a naranja)
+    static Color HeatMapColor(float value) {
+        return Color(value);
+    }
+
+    // Obtener los componentes de color como un glm::vec3 (de blanco a naranja)
+    glm::vec3 getVec3() const {
+        // Utiliza la intensidad para interpolar entre blanco y naranja
+        float r = 1.0f - intensity;    // Rojo
+        float g = 0.5f + intensity / 2; // Verde
+        float b = 0.0f;                // Azul (0 en todos los casos)
+        return glm::vec3(r, g, b);
+    }
+
+private:
+    float intensity;
+};
+
+struct rayoTraicingInfo {
+    point posicion;
+    int idTriangulo;
+    int contadorChocadas;
+};
+
 //---------------------------------------------------------------------------
 class receptor {
 public:
