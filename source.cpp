@@ -34,10 +34,16 @@ float delta = 0.15; //Defincion del coeficiente alfa
 int tM = 1000; //tiempo de simulacion en unidad discreta
 double v_son = 340.0; //velocidad de transmisión de 340 m/s (constante V_SON)
 reflection* arrayreflecciones = NULL; //Refleciones
+point o ; //Punto de origen
+float simulationInterval = 0.5f;
+point** arrayRec;
+
 
 
 void laodRoom();
 void energytransition();
+
+float elapsedTime = 0.0f;
 
 //General Settings
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -94,82 +100,48 @@ int main()
     }
     // configure global opengl state
     // -----------------------------
-    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+
     // build and compile shaders
     // -------------------------
     Shader room("shaders/room.vs", "shaders/room.fs");
-    Shader ico("shaders/lightcube.vs", "shaders/lightcube.fs");
     Shader rayo("shaders/lightcube.vs", "shaders/lightcube.fs");
     //Se carga la sala
     laodRoom();
-    int numeroTriangulos = NumTri;
     float vertices1[108];
     int contradork = 0;
-    float vertices2[180];
-    int contadorIco = 0;
+
+
     //El vertex imput para el cubo y la particula
     for (int i = 0; i < r.NP; i++) {
         for (int j = 0; j < r.p[i].NT; j++) {
-            vertices1[contradork] = r.p[i].t[j].p0.x * 0.1;
+            vertices1[contradork] = r.p[i].t[j].p0.x;
             contradork++;
-            vertices1[contradork] = r.p[i].t[j].p0.y * 0.1;
+            vertices1[contradork] = r.p[i].t[j].p0.y;
             contradork++;
-            vertices1[contradork] = r.p[i].t[j].p0.z * 0.1;
+            vertices1[contradork] = r.p[i].t[j].p0.z;
             contradork++;
-            vertices1[contradork] = r.p[i].t[j].p1.x * 0.1;
+            vertices1[contradork] = r.p[i].t[j].p1.x ;
             contradork++;
-            vertices1[contradork] = r.p[i].t[j].p1.y * 0.1;
+            vertices1[contradork] = r.p[i].t[j].p1.y;
             contradork++;
-            vertices1[contradork] = r.p[i].t[j].p1.z * 0.1;
+            vertices1[contradork] = r.p[i].t[j].p1.z;
             contradork++;
-            vertices1[contradork] = r.p[i].t[j].p2.x * 0.1;
+            vertices1[contradork] = r.p[i].t[j].p2.x;
             contradork++;
-            vertices1[contradork] = r.p[i].t[j].p2.y * 0.1;
+            vertices1[contradork] = r.p[i].t[j].p2.y;
             contradork++;
-            vertices1[contradork] = r.p[i].t[j].p2.z * 0.1;
+            vertices1[contradork] = r.p[i].t[j].p2.z;
             contradork++;
 
         }
     }
-    //el verrtex input para el icocaedro
-    contadorIco = 0;
-    for (int i = 0; i < 20; i++) {
-        vertices2[contadorIco] = s.IcoFace[i].p0.x * 0.1;
-        contadorIco++;
-        vertices2[contadorIco] = s.IcoFace[i].p0.y * 0.1;
-        contadorIco++;
-        vertices2[contadorIco] = s.IcoFace[i].p0.z * 0.1;
-        contadorIco++;
-        vertices2[contadorIco] = s.IcoFace[i].p1.x * 0.1;
-        contadorIco++;
-        vertices2[contadorIco] = s.IcoFace[i].p1.y * 0.1;
-        contadorIco++;
-        vertices2[contadorIco] = s.IcoFace[i].p1.z * 0.1;
-        contadorIco++;
-        vertices2[contadorIco] = s.IcoFace[i].p2.x * 0.1;
-        contadorIco++;
-        vertices2[contadorIco] = s.IcoFace[i].p2.y * 0.1;
-        contadorIco++;
-        vertices2[contadorIco] = s.IcoFace[i].p2.z * 0.1;
-        contadorIco++;
-    }
+  
+
 
     energytransition();
 
-    int nPunto = 0;
-    int idRayo = 0;
-    point puntoDeOrigen; //Punto de Origen
-    point puntoDeIncidencia; //Punto de Incidencia
-
-    puntoDeOrigen.x = arrayreflecciones[idRayo].r[nPunto].x * 0.1;
-    puntoDeOrigen.y = arrayreflecciones[idRayo].r[nPunto].y * 0.1;
-    puntoDeOrigen.z = arrayreflecciones[idRayo].r[nPunto].z * 0.1;
-
-    nPunto++;
-    puntoDeIncidencia.x = arrayreflecciones[idRayo].r[nPunto].x * 0.1;
-    puntoDeIncidencia.y = arrayreflecciones[idRayo].r[nPunto].y * 0.1;
-    puntoDeIncidencia.z = arrayreflecciones[idRayo].r[nPunto].z * 0.1;
-
+  
     //Configuracion del Ambiente para el cubo y la particula
     // first, configure the cube's VAO (and VBO)
     unsigned int VBO, cubeVAO;
@@ -181,16 +153,7 @@ int main()
     // position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-    //Configuracion del ico
-    unsigned int VBO2, cubeVAO2;
-    glGenVertexArrays(1, &cubeVAO2);
-    glGenBuffers(1, &VBO2);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO2);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices2), vertices2, GL_STATIC_DRAW);
-    glBindVertexArray(cubeVAO2);
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
+   
     //Configuracion del cubo de luz
     unsigned int lightCubeVBO, lightCubeVAO;
     glGenVertexArrays(1, &lightCubeVAO);
@@ -201,81 +164,134 @@ int main()
     // position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-    double tiempo1 = 0;
+
+    int tSimulacion = 0;
+
+    // Declaración de la matriz para registrar el número de impactos por triángulo
+    int** impactosPorTriangulo = new int* [NumTri];
+    for (int t = 0; t < NumTri; t++) {
+        impactosPorTriangulo[t] = new int[tM];
+        for (int ti = 0; ti < tM; ti++) {
+            impactosPorTriangulo[t][ti] = 0; // Inicializa el contador de impactos a cero
+        }
+    }
+    int* sumImpactosPorTriangulo = new int[NumTri]();
+    // Difusión de la energía en los triángulos
+    for (int r = 0; r < N_RAYOS; r++) {
+        double distAcum = 0;
+
+        int tiempo = 0;
+        for (int re = 0; re < 50; re++) {
+            int tri = arrayreflecciones[r].idTriangle[re];
+            distAcum += arrayreflecciones[r].d[re];
+
+
+
+            int tim = int(1000 * distAcum / v_son);
+
+
+            impactosPorTriangulo[tri][tim] = 1;
+
+            tiempo = tim;
+        }
+    }
+
+    std::cout << "Matriz de energia" << std::endl;
+    for (int i = 0; i < NumTri; i++) {
+        for (int j = 0; j < 10; j++) {
+            std::cout << impactosPorTriangulo[i][j] << " ";
+        }
+        std::cout << std::endl;
+    }
+
     // render loop
     while (!glfwWindowShouldClose(window))
     {
-        // per-frame time logic
+        // Actualiza el tiempo transcurrido
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
+
+        // Actualiza el tiempo total transcurrido
+        elapsedTime += deltaTime;
+
+        if (elapsedTime >= 0.5) {
+            if (tSimulacion < tM) {
+                tSimulacion++;
+            }
+            elapsedTime = 0.0f;
+        }
+
         // input
         processInput(window);
         // render
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        //Graficar el room
-          // be sure to activate shader when setting uniforms/drawing objects
+
+        //Graficar el room       
+       // view/projection transformations
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+
+        glm::mat4 view = camera.GetViewMatrix();
+        // world transformation
+        glm::mat4 model = glm::mat4(1.0f);
+
         room.use();
-        room.setVec3("ourColor", 0.0f, 0.0f, 1.0f);
         room.setVec3("lightColor", 0.0f, 1.0f, 0.0f);
         room.setVec3("lightPos", lightPos);
         room.setVec3("viewPos", camera.Position);
-        // view/projection transformations
-        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-        glm::mat4 view = camera.GetViewMatrix();
-        room.setMat4("projection", projection);
-        room.setMat4("view", view);
-        // world transformation
-        glm::mat4 model = glm::mat4(1.0f);
-        room.setMat4("model", model);
-        // render the cube
-        glBindVertexArray(cubeVAO);
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        //Render del icosaedro
-        ico.use();
-        ico.setVec3("objectColor", 1.0f, 0.0f, 0.0f);
-        ico.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
-        ico.setVec3("lightPos", lightPos);
-        ico.setVec3("viewPos", camera.Position);
-        // view/projection transformations
-        glm::mat4 projection2 = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-        glm::mat4 view2 = camera.GetViewMatrix();
-        ico.setMat4("projection", projection2);
-        ico.setMat4("view", view2);
-        // world transformation
-        glm::mat4 model2 = glm::mat4(1.0f);
-        ico.setMat4("model", model2);
-        // render the cube
-        glBindVertexArray(cubeVAO2);
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        glDrawArrays(GL_TRIANGLES, 0, 60);
+
+        for (int i = 0; i < NumTri; i++) {
+            // Configura el color calculado en el shader
+            if (impactosPorTriangulo[i][tSimulacion] == 1)
+            {
+                room.setVec3("ourColor", 1.0f, 1.0f, 0.0f);
+            }
+            else {
+                room.setVec3("ourColor", 1.0f, 1.0f, 1.0f);
+            }
+            room.setMat4("projection", projection);
+            room.setMat4("view", view);
+           
+            room.setMat4("model", model);
+            // render the cube
+            glBindVertexArray(cubeVAO);
+            glDrawArrays(GL_TRIANGLES, i * 3, 3); // Asume que los triángulos están organizados en grupos de 3 vértices consecutivos
+        }
+       
         //Dibujar la fuente
         rayo.use();
         rayo.setMat4("projection", projection);
         rayo.setMat4("view", view);
         rayo.setVec3("ourColor", 0.5f, 1.0f, 0.5f);
         model = glm::mat4(1.0f);
-        float distancia = puntoDeOrigen.distancia(puntoDeIncidencia);
-        if ((puntoDeOrigen.distancia(puntoDeIncidencia) * (glfwGetTime() - tiempo1) * speed) >= distancia) {
-            tiempo1 = glfwGetTime();
-            puntoDeOrigen = puntoDeIncidencia;
-            nPunto++;
-            puntoDeIncidencia.x = arrayreflecciones[idRayo].r[nPunto].x * 0.1;
-            puntoDeIncidencia.y = arrayreflecciones[idRayo].r[nPunto].y * 0.1;
-            puntoDeIncidencia.z = arrayreflecciones[idRayo].r[nPunto].z * 0.1;
-        };
-        vector1 mov = ((puntoDeIncidencia - puntoDeOrigen)) * (glfwGetTime() - tiempo1) * speed;
-        model = glm::translate(model, glm::vec3(puntoDeOrigen.x + mov.x, puntoDeOrigen.y + mov.y, puntoDeOrigen.z + mov.z));
-        model = glm::scale(model, glm::vec3(0.01f)); // tama�o del cubo peque�o
-        rayo.setMat4("model", model);
-        glBindVertexArray(lightCubeVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
+
+        for (int idRayo = 0; idRayo < 20; idRayo ++ ) {
+            // Calculate the model matrix for each ray instance
+            glm::mat4 model = glm::mat4(1.0f);
+
+            model = glm::translate(model, glm::vec3(arrayRec[idRayo][tSimulacion].x,
+                arrayRec[idRayo][tSimulacion].y,
+                arrayRec[idRayo][tSimulacion].z));
+            
+            model = glm::scale(model, glm::vec3(0.01f)); // Tamaño del cubo pequeño
+            rayo.setMat4("model", model);
+
+            // Render the cube for the current ray
+            glBindVertexArray(lightCubeVAO);
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
+        
+        
         glfwSwapBuffers(window);
         glfwPollEvents();
 
     }
+
+
     // optional: de-allocate all resources once they've outlived their purpose:
 // ------------------------------------------------------------------------
     glDeleteVertexArrays(1, &cubeVAO);
@@ -507,22 +523,21 @@ void laodRoom() {
 }
 void energytransition() {
     if (loadedRoom) {
-        double eneRayo, eneResidual; //Energía del rayo y energía residual;
         int t_vuelo = 0; // Tiempo de vuelo del rayo
 
-        point o;
-        o.x = -1.0;
-        o.y = 1.5;
+
+        o.x = 1.0;
+        o.y = 1.0;
         o.z = 1.0;
 
         s.eF = energiaFuente; //Energia de la fuente
         s.createRays(N_RAYOS);  //Numero de rayos
 
-        eneRayo = s.eF / N_RAYOS; // Energía Inicial
+        double eneRayo = s.eF / N_RAYOS; // Energía Inicial
 
 
         /*
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 20; i++) { 
             printf("Rayos: x: %f, y: %f, z: %f\n", s.Rays[i].x, s.Rays[i].y, s.Rays[i].z);
         }
         */
@@ -537,26 +552,39 @@ void energytransition() {
 
         mE.Init(NumTri, tM); //inicializacion de la matriz de energia
 
-        //Difusion de la energia en los triangulos
-        for (int r = 0; r < N_RAYOS; r++)
-        {
-            eneResidual = eneRayo;
-            //std::cout << "rayo " << r << std::endl;
-            for (int re = 0; re < 50; re++)
-            {
+
+        arrayRec = new point * [N_RAYOS];
+
+        // Difusión de la energía en los triángulos
+        for (int r = 0; r < N_RAYOS; r++) {
+            double eneResidual = eneRayo;
+            double distAcum = 0;
+            arrayRec[r] = new point[tM];
+
+            arrayRec[r][0] = o;
+            int tiempo = 0;
+            for (int re = 0; re < 50; re++) {
                 int tri = arrayreflecciones[r].idTriangle[re];
-                if (tri >= 0 && tri < NumTri)
-                {
-                    int tim = int((arrayreflecciones[r].d[re+1] - arrayreflecciones[r].d[re])/v_son);
-                    if (tim >= 0 && tim < tM)
-                    {
-                        mE.A[tri][tim] += (eneResidual * (1 - alfa) * delta);
-                    }
+                point pun = arrayreflecciones[r].r[re];
+                distAcum += arrayreflecciones[r].d[re];
+
+                int tim = int(1000 * distAcum / v_son);
+                arrayRec[r][tim] = pun;
+
+                for (int t = tiempo + 1; t < tim; t++) {
+                    arrayRec[r][t].x = arrayRec[r][t - 1].x + (arrayRec[r][tim].x - arrayRec[r][tiempo].x) / (tim - tiempo);
+                    arrayRec[r][t].y = arrayRec[r][t - 1].y + (arrayRec[r][tim].y - arrayRec[r][tiempo].y) / (tim - tiempo);
+                    arrayRec[r][t].z = arrayRec[r][t - 1].z + (arrayRec[r][tim].z - arrayRec[r][tiempo].z) / (tim - tiempo);
                 }
+
+                tiempo = tim;
+                mE.A[tri][tim] += (eneResidual * (1 - alfa) * delta);
+
                 eneResidual = eneResidual * (1 - alfa) * (1 - delta);
             }
         }
-  
+
+
         //Transicion de energia
         for (int t = 0; t < tM; t++) {
             for (int e = 0; e < NumTri; e++) {// Triángulo 1
@@ -565,15 +593,18 @@ void energytransition() {
                         //Es el instante de tiempo de la simulacion + el instate de  tiempo en que ocurre la transmision de energia en ese triangulo a hacia el siguiente triangulo
                         t_vuelo = mTV.A[e][ed] + t;
                         if (t_vuelo <= tM) {
+
                             mE.A[ed][t_vuelo] += (mE.A[e][t] * mPE.A[e][ed]) * (1 - alfa);
                         }
+                        
+                        
                     }
                 }
             }
         }
         std::cout << "Matriz de energia" << std::endl;
-        for (int i = 0; i < mD.m; i++) {
-            for (int j = 0; j < mD.n; j++) {
+        for (int i = 0; i < NumTri; i++) {
+            for (int j = 0; j < 15; j++) {
                 std::cout << mE.A[i][j] << " ";
             }
             std::cout << std::endl;
