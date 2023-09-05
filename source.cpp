@@ -182,20 +182,14 @@ int main()
             tiempo = tim;
         }
     }
+
     int* maxImpTri = new int[NumTri]();
 
     for (int i = 0; i < NumTri; i++) {
         for (int j = 1; j < tM; j++) {
             impactosPorTriangulo[i][j] = impactosPorTriangulo[i][j] + impactosPorTriangulo[i][j - 1];
-            maxImpTri[i] = impactosPorTriangulo[i][j];
+                maxImpTri[i] = impactosPorTriangulo[i][j];
         }
-    }
-
-    for (int i = 0; i < NumTri; i++) {
-        for (int j = 990; j < tM; j++) {
-            printf("%d ", impactosPorTriangulo[i][j]);
-        }
-        printf("\n");
     }
     // render loop
     while (!glfwWindowShouldClose(window))
@@ -233,29 +227,38 @@ int main()
         room.setVec3("lightColor", 0.0f, 1.0f, 0.0f);
         room.setVec3("lightPos", lightPos);
         room.setVec3("viewPos", camera.Position);
+        
+        int cont_t = 0; //contador del numero de triangulos
+        for (int i = 0; i < r.NP; i++) {
+            for (int j = 0; j < r.p[i].NT; j++) {
 
-        for (int i = 0; i < NumTri; i++) {
-            // Configura el color calculado en el shader
+                // Obtén el valor de energía correspondiente a este triángulo
+               // float energyValue = mE.A[cont_t][tSimulacion];
 
-            // Obtén el color calculado en función del número de impactos y el valor máximo de impactos
+                if (mE.A[cont_t][tSimulacion] != 0.0) {
+                    float energyValue = float(impactosPorTriangulo[cont_t][tSimulacion]) / 50.0;
+                    // Configura el color calculado en el shader basado en el valor de energía
+                    r.p[i].t[j].Color.heatMapColor(float(energyValue));
+                }
+        
 
-            Color triangleColor = Color::heatMapColor(impactosPorTriangulo[i][tSimulacion], maxImpTri[i]);
-
-            // Configura el color calculado en el shader
-            room.setVec3("ourColor", glm::vec3(triangleColor.red, triangleColor.green, triangleColor.blue));
-            room.setMat4("projection", projection);
-            room.setMat4("view", view);
-            room.setMat4("model", model);
-            // render the cube
-            glBindVertexArray(cubeVAO);
-            glDrawArrays(GL_TRIANGLES, i * 3, 3);
+                // Configura el color calculado en el shader
+                room.setVec3("ourColor", glm::vec3(r.p[i].t[j].Color.red, r.p[i].t[j].Color.green, r.p[i].t[j].Color.blue));
+                room.setMat4("projection", projection);
+                room.setMat4("view", view);
+                room.setMat4("model", model);
+                // render the cube
+                glBindVertexArray(cubeVAO);
+                glDrawArrays(GL_TRIANGLES, cont_t * 3, 3);
+                cont_t++;
+            }
         }
 
         //Dibujar la fuente
         rayo.use();
         rayo.setMat4("projection", projection);
         rayo.setMat4("view", view);
-        rayo.setVec3("ourColor", 0.5f, 1.0f, 0.5f);
+        rayo.setVec3("ourColor", glm::vec3(0.5f, 1.0f, 0.5f));
         model = glm::mat4(1.0f);
 
         for (int idRayo = 0; idRayo < s.NRAYS; idRayo++) {
