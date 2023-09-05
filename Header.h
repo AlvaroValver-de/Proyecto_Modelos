@@ -221,6 +221,72 @@ public:
         return sqrt((p2.x - x) * (p2.x - x) + (p2.y - y) * (p2.y - y) + (p2.z - z) * (p2.z - z));
     }
 };
+
+class color {
+public:
+    float red, green, blue;
+
+    // Constructor predeterminado
+    color() : red(0.0f), green(0.0f), blue(0.0f) {}
+
+    // Constructor con argumentos
+    color(float r, float g, float b) : red(r), green(g), blue(b) {}
+
+    // Función para generar un mapa de calor basado en el valor
+   /* void heatMapColor(float value) {
+        // Definir los colores de referencia para el mapa de calor
+        color coldColor(0.0f, 0.0f, 1.0f); // Azul frío
+        color hotColor(1.0f, 0.0f, 0.0f);  // Rojo cálido
+
+        // Si el valor es 0, no cambia el color
+        if (value == 0.0f) {
+            red = coldColor.red;
+            green = coldColor.green;
+            blue = coldColor.blue;
+        }
+        else {
+            // Asegurarse de que el valor esté en el rango [0.0, 1.0]
+            value = (value < 0.0f) ? 0.0f : (value > 1.0f) ? 1.0f : value;
+
+            // Interpolación lineal entre el color frío y el cálido
+            red = (1.0f - value) * coldColor.red + value * hotColor.red;
+            green = (1.0f - value) * coldColor.green + value * hotColor.green;
+            blue = (1.0f - value) * coldColor.blue + value * hotColor.blue;
+        }
+    }*/
+    void heatMapColor(float normalizedValue) {
+        // Escala el valor entre 0 y 1
+         red = 0.0f; // Rojo (frío)
+         green = 0.0f; // Verde (frío)
+         blue = 1.0f; // Azul (inicio en azul)
+
+         if (normalizedValue < 0.25f) {
+             // De azul a verde
+             red = 0.0f;
+             green = normalizedValue * 4.0f;
+             blue = 1.0f;
+         }
+         else if (normalizedValue < 0.5f) {
+             // De verde a amarillo
+             red = 0.0f;
+             green = 1.0f;
+             blue = 1.0f - (normalizedValue - 0.25f) * 4.0f;
+         }
+         else if (normalizedValue < 0.75f) {
+             // De amarillo a naranja
+             red = (normalizedValue - 0.5f) * 4.0f;
+             green = 1.0f;
+             blue = 0.0f;
+         }
+         else {
+             // De naranja a rojo
+             red = 1.0f;
+             green = 1.0f - (normalizedValue - 0.75f) * 4.0f;
+             blue = 0.0f;
+         }
+    }
+};
+
 //---------------------------------------------------------------------------
 class triangle {
 public:
@@ -228,6 +294,7 @@ public:
     int Projection;        // Proyección
     double a0;             // Constante a0 para cálculos futuros
     int ID;                // Identificador único
+    color Color;      // Miembro de tipo color
 
     // Constructor por defecto
     triangle() {
@@ -238,6 +305,7 @@ public:
         Projection = 0;
         a0 = 0;
         ID = 0;
+        Color = color(1.0f, 1.0f, 1.0f); // Inicializa el miembro Color con un color blanco
     };
 
     // Sobrecarga del operador =
@@ -833,32 +901,9 @@ public:
         }
     }
 };
-//----------------------------------------------------------------------------
-class Color {
-public:
-    float red;
-    float green;
-    float blue;
 
-    // Constructor
-    Color(float r, float g, float b) : red(r), green(g), blue(b) {}
 
-    static Color heatMapColor(float value, float maxValue) {
-        // Escala el valor entre 0 y 1
-        float normalizedValue = value / maxValue;
 
-        float r = 0.0f;
-        float g = 0.0f;
-        float b = 0.0f;
-
-        // Asigna colores en función del valor normalizado
-        r = normalizedValue;      // Rojo
-        g = 1.0f - normalizedValue; // Verde
-        b = 1.0f - normalizedValue; // Azul
-
-        return Color(r, g, b);
-    }
-};
 
 //---------------------------------------------------------------------------
 class receptor {
