@@ -10,23 +10,18 @@
 #include <math.h>
 #include <glm/glm.hpp>
 
-
 // Establece el espacio de nombres a utilizar, en este caso 'std'.
 using namespace std;
 
-//---------- Definiciones Globales ----------
-
-// Estos son identificadores para facilitar la identificación de ciertos valores.
+//-------------------------- Definiciones Globales --------------------------
+// Estos son identificadores para facilitar la identificación de valores.
 #define None                    -1
 #define xy                      0
 #define xz                      1
 #define yz                      2
-
 // Constantes físicas y matemáticas.
 #define V_SON                   340.0   // Velocidad del sonido en m/s.
 #define PI                      3.1415926535897932384626433832795  // Aproximación del valor de PI.
-#define MaxNPoints              200     // Número máximo de puntos permitidos.
-
 //---------------------------------------------------------------------------
 class vector1 {
 public:
@@ -221,7 +216,7 @@ public:
         return sqrt((p2.x - x) * (p2.x - x) + (p2.y - y) * (p2.y - y) + (p2.z - z) * (p2.z - z));
     }
 };
-
+//---------------------------------------------------------------------------
 class color {
 public:
     float red, green, blue;
@@ -232,28 +227,6 @@ public:
     // Constructor con argumentos
     color(float r, float g, float b) : red(r), green(g), blue(b) {}
 
-    // Función para generar un mapa de calor basado en el valor
-   /* void heatMapColor(float value) {
-        // Definir los colores de referencia para el mapa de calor
-        color coldColor(0.0f, 0.0f, 1.0f); // Azul frío
-        color hotColor(1.0f, 0.0f, 0.0f);  // Rojo cálido
-
-        // Si el valor es 0, no cambia el color
-        if (value == 0.0f) {
-            red = coldColor.red;
-            green = coldColor.green;
-            blue = coldColor.blue;
-        }
-        else {
-            // Asegurarse de que el valor esté en el rango [0.0, 1.0]
-            value = (value < 0.0f) ? 0.0f : (value > 1.0f) ? 1.0f : value;
-
-            // Interpolación lineal entre el color frío y el cálido
-            red = (1.0f - value) * coldColor.red + value * hotColor.red;
-            green = (1.0f - value) * coldColor.green + value * hotColor.green;
-            blue = (1.0f - value) * coldColor.blue + value * hotColor.blue;
-        }
-    }*/
     void heatMapColor(float normalizedValue) {
         // Escala el valor entre 0 y 1
          red = 0.0f; // Rojo (frío)
@@ -286,7 +259,6 @@ public:
          }
     }
 };
-
 //---------------------------------------------------------------------------
 class triangle {
 public:
@@ -513,7 +485,6 @@ public:
     }
 };
 //---------------------------------------------------------------------------
-// Estructura para almacenar información sobre reflexiones
 struct reflection {
     bool lost;        // Bandera para rayos perdidos
     point r[50];      // Posiciones de reflexión (máximo 50 reflexiones)
@@ -524,20 +495,64 @@ struct reflection {
     int N;            // Número de reflexiones
 };
 //---------------------------------------------------------------------------
+class receptor {
+public:
+    point p;                //Posición
+    double ReceptionRadius; //Radio de recepci�n
+    double* eR;             //Energ�a recibida en el receptor
+    color Color;            //Color del receptor
+    int tTotal;                //tiempo de simluacion
+
+    receptor() {
+        p = 0.0;
+        eR = NULL;
+        tTotal = 0;
+        ReceptionRadius = 0.3;
+        Color = color(0.6f, 0.0f, 0.6f);
+
+    }
+    void initReceptor(int totalSim) {
+        tTotal = totalSim;
+        eR = new double[tTotal];
+        for (int i = 0; i < tTotal; i++) {
+            eR[i] = 0.0;
+        }
+    };
+};
+//---------------------------------------------------------------------------
 class room {
 public:
     int		NP;		// Número de Planos
     plane* p;		// Puntero a Planos
     double		distMax;		// Distancia máxima entre dos puntos en la sala.
-    int     NR;  // Número de receptores
+    receptor* r;     //Number of receptors 
+    int NR;     //Number of receptors
 
     room() {
         NP = 0;
         p = NULL;
-        NR = 0;
         distMax = 0.0;
+        NR = 0;
+        r = NULL;
     }
 
+    void NewReceptor(int N) {
+        NR = N;
+        delete[] r; 
+        r = new receptor[NR]; 
+
+        int cont_rec = 0;
+        for (int i = -1; i < 2; i++) {
+            for (int j = -1; j < 2; j++) {
+                for (int k = -1; k < 2; k++) {
+                    r[cont_rec].p.x = i;
+                    r[cont_rec].p.y = j;
+                    r[cont_rec].p.z = k;
+                    cont_rec++;
+                }
+            }
+        }
+    }
 
 
     double IntersectionDistance(vector1 n, point pnt, vector1 u, point o) {
@@ -625,7 +640,6 @@ public:
 
         return reflection;
     }
-
 
     // Función que realiza el Ray Tracing en una escena y devuelve un array de reflexiones
     reflection* RayTracing(point origin, vector1* rays, int numRays) {
@@ -901,23 +915,5 @@ public:
         }
     }
 };
-
-
-
-
 //---------------------------------------------------------------------------
-class receptor {
-public:
-    point p;                // Posición del receptor en el espacio.
-    double Radius;          // Radio del disco receptor.
-    double eR;             // Energía recibida.
-
-    // Constructor
-    receptor() {
-        p = 0.0;
-        eR = NULL;
-        Radius = 0.0;
-    }
-};
-
 #endif
