@@ -499,25 +499,35 @@ class receptor {
 public:
     point p;                //Posición
     double ReceptionRadius; //Radio de recepci�n
-    double* eR;             //Energ�a recibida en el receptor
     color Color;            //Color del receptor
-    int tTotal;                //tiempo de simluacion
 
     receptor() {
         p = 0.0;
-        eR = NULL;
-        tTotal = 0;
-        ReceptionRadius = 0.3;
+        ReceptionRadius = 0.5;
         Color = color(0.6f, 0.0f, 0.6f);
 
     }
-    void initReceptor(int totalSim) {
-        tTotal = totalSim;
-        eR = new double[tTotal];
-        for (int i = 0; i < tTotal; i++) {
-            eR[i] = 0.0;
-        }
+    double CalcularAreaDiscoProyectado(point b) {
+        // Inicializar variables
+        double area = 0.0;     // Área del disco proyectado.
+        double distancia = 0.0; // Distancia entre el punto p y b.
+        double altura = 0.0;   // Altura del triángulo.
+        double radio = 0.0;    // Radio del disco proyectado.
+        double angulo = 0.0;   // Ángulo entre distancia y altura.
+        double distanciaProyeccion = 0.2; // Distancia a la que se proyecta el disco desde el centroide.
+
+        vector1 vectorAuxiliar = p - b;// Calcular el vector entre punto hasta el centroide
+
+        distancia = sqrt(vectorAuxiliar * vectorAuxiliar); // Calcular la distancia distancia entre p y b
+        altura = sqrt(distancia * distancia + ReceptionRadius);        // Calcular la altura altura del triángulo utilizando el teorema de Pitágoras y un factor de escala (0.3 en este caso).
+        angulo = acos(distancia / altura);         // Calcular el ángulo angulo entre distancia y altura utilizando la función inversa del coseno (acos).
+        altura = distanciaProyeccion / cos(angulo);         // Ajustar la altura altura en función de la distancia a la que se proyecta el disco .
+        radio = sqrt(altura * altura - distanciaProyeccion * distanciaProyeccion);  // Calcular el radio radio del disco proyectado utilizando el teorema de Pitágoras.
+        area = PI * radio * radio;         // Calcular el área del disco proyectado como el área de un círculo con radio radio (π * radio^2).
+
+        return area;
     };
+
 };
 //---------------------------------------------------------------------------
 class room {
