@@ -37,6 +37,11 @@ point o; //Punto de origen
 point** arrayRec;  //Array Recorrido
 float elapsedTime = 0.0f;
 const int NumReceptores = 27; // Número de receptores
+MatDouble mDR; //Matriz Distancia Receptor
+MatDouble mTVR; //Matriz Tiempo de Vuelo  Receptor
+MatDouble mASR; //matriz angulos solidos Receptor
+MatDouble mPER; //matriz porcentage de energia Receptor
+MatDouble mER;
 
 void laodRoom();
 void energytransition();
@@ -507,7 +512,7 @@ void laodRoom() {
                             mD.A[idTri1][idTri2] = r.p[i].t[j].bc.distancia(r.p[k].t[l].bc); //Calculo de la distancia de baricentro de los triangulos de la sala hacia otro triangulo de la sala NO coplanar
                             mTV.A[idTri1][idTri2] = int(1000 * mD.A[idTri1][idTri2] / V_SON); // Calculo de la distancia de baricentro de los triangulos de la sala hacia otro triangulo de la sala NO coplanar
                             mAS.A[idTri1][idTri2] = r.p[k].t[l].AnguloSolido(r.p[i].t[j].bc); // Calculo de la distancia de baricentro de los triangulos de la sala hacia otro triangulo de la sala NO coplanar
-                            suma_angulos_solidos[cont] += abs(mAS.A[idTri1][idTri2]);
+                            suma_angulos_solidos[cont] += mAS.A[idTri1][idTri2];
                         }
                     }
                 }
@@ -521,7 +526,7 @@ void laodRoom() {
             }
         }
 
-        std::cout << "Matriz distancia entre Baricentros" << std::endl;
+        std::cout << "Matriz distancia entre Baricentros de los triangulos" << std::endl;
         for (int i = 0; i < NumTri; i++) {
             for (int j = 0; j < NumTri; j++) {
                 std::cout << std::fixed << std::setprecision(2) << mD.A[i][j] << " ";
@@ -529,7 +534,7 @@ void laodRoom() {
             std::cout << std::endl;
         }
 
-        std::cout << "Matriz tiempo de vuelo entre Baricentros" << std::endl;
+        std::cout << "Matriz tiempo de vuelo entre Baricentros de los triangulos" << std::endl;
         for (int i = 0; i < NumTri; i++) {
             for (int j = 0; j < NumTri; j++) {
                 std::cout << mTV.A[i][j] << " "; // Use setw for formatting integers
@@ -537,7 +542,7 @@ void laodRoom() {
             std::cout << std::endl;
         }
 
-        std::cout << "Matriz porcentaje de energia" << std::endl;
+        std::cout << "Matriz porcentaje de energia de los triangulos" << std::endl;
         for (int i = 0; i < NumTri; i++) {
             for (int j = 0; j < NumTri; j++) {
                 std::cout << std::fixed << std::setprecision(3) << mPE.A[i][j] << " ";
@@ -560,7 +565,58 @@ void laodRoom() {
                 }
             }
         }
+        // Inicialización de las matrices
+        mDR.Init(r.NR, NumTri);
+        mTVR.Init(r.NR, NumTri);
+        mASR.Init(r.NR, NumTri);
+        mPER.Init(r.NR, NumTri);
 
+        double* suma_angulos_solidos_receptor = new double[r.NR]();
+
+        // Ciclo para el cálculo de las matrices de distancia, tiempo de vuelo y ángulos sólidos de los receptores
+        for (int i = 0; i < r.NP; i++) {                      // Recorre los planos de la sala.
+            for (int j = 0; j < r.p[i].NT; j++) {             // Recorre los triángulos del plano.
+                int idTri = r.p[i].t[j].ID;
+                // Cálculo de las distancias, tiempo de vuelo y ángulos sólidos de los receptores
+                for (int m = 0; m < r.NR; m++) {
+                    mDR.A[m][idTri] = r.r[m].p.distancia(r.p[i].t[j].bc); // Cálculo de la distancia de la posición del receptor al baricentro de los triángulos de la sala
+                    mTVR.A[m][idTri] = int(1000 * mDR.A[m][idTri] / v_son); // Cálculo del tiempo de vuelo entre el receptor y el baricentro de los triángulos de la sala
+                    mASR.A[m][idTri] = r.r[m].CalcularAreaDiscoProyectado(r.p[i].t[j].bc); // Cálculo del ángulo sólido entre el receptor y el baricentro de los triángulos de la sala
+                    suma_angulos_solidos_receptor[m] += mASR.A[m][idTri];
+                }
+            }
+        }
+
+        // Cálculo de la matriz porcentaje de energía del receptor
+        for (int i = 0; i < r.NR; i++) {
+            for (int j = 0; j < NumTri; j++) {
+                mPER.A[i][j] = mASR.A[i][j] / suma_angulos_solidos_receptor[i];
+            }
+        }
+
+        std::cout << "Matriz distancia entre Baricentros de los receptores" << std::endl;
+        for (int i = 0; i < r.NR; i++) {
+            for (int j = 0; j < NumTri; j++) {
+                std::cout << std::fixed << std::setprecision(2) << mDR.A[i][j] << " ";
+            }
+            std::cout << std::endl;
+        }
+
+        std::cout << "Matriz tiempo de vuelo entre Baricentros de los receptores" << std::endl;
+        for (int i = 0; i < r.NR; i++) {
+            for (int j = 0; j < NumTri; j++) {
+                std::cout << mTVR.A[i][j] << " "; // Use setw for formatting integers
+            }
+            std::cout << std::endl;
+        }
+
+        std::cout << "Matriz porcentaje de energia de los receptores" << std::endl;
+        for (int i = 0; i < r.NR; i++) {
+            for (int j = 0; j < NumTri; j++) {
+                std::cout << std::fixed << std::setprecision(3) << mPER.A[i][j] << " ";
+            }
+            std::cout << std::endl;
+        }
         loadedRoom = true; // Indica que la habitación ha sido cargada exitosamente.
     }
 }
@@ -582,25 +638,30 @@ void energytransition() {
 
         mE.Init(NumTri, tM); //inicializacion de la matriz de energia
 
+        mER.Init(r.NR, tM); //inicializacion de la matriz de energia del receptor
+
         arrayRec = new point * [s.NRAYS];
 
         // Difusión de la energía difusa en los triángulos
-        for (int r = 0; r < s.NRAYS; r++) {
+        for (int rayo = 0; rayo < s.NRAYS; rayo++) {
             double eneResidual = eneRayo;
             double distAcum = 0;
-            arrayRec[r] = new point[tM];
-            arrayRec[r][0] = o;
+            arrayRec[rayo] = new point[tM];
+            arrayRec[rayo][0] = o;
             int tiempo = 0;
-            for (int re = 0; re < arrayreflecciones[r].N; re++) {
-                int tri = arrayreflecciones[r].idTriangle[re];
-                point pun = arrayreflecciones[r].r[re];
-                distAcum += arrayreflecciones[r].d[re];
+            for (int re = 0; re < arrayreflecciones[rayo].N; re++) {
+                int tri = arrayreflecciones[rayo].idTriangle[re];
+                point pun = arrayreflecciones[rayo].r[re];
+                distAcum += arrayreflecciones[rayo].d[re];
                 int tim = int(1000 * distAcum / v_son);
-                arrayRec[r][tim] = pun;
+                arrayRec[rayo][tim] = pun;
                 for (int t = tiempo + 1; t < tim; t++) {
-                    arrayRec[r][t].x = arrayRec[r][t - 1].x + (arrayRec[r][tim].x - arrayRec[r][tiempo].x) / (tim - tiempo);
-                    arrayRec[r][t].y = arrayRec[r][t - 1].y + (arrayRec[r][tim].y - arrayRec[r][tiempo].y) / (tim - tiempo);
-                    arrayRec[r][t].z = arrayRec[r][t - 1].z + (arrayRec[r][tim].z - arrayRec[r][tiempo].z) / (tim - tiempo);
+                    arrayRec[rayo][t].x = arrayRec[rayo][t - 1].x + (arrayRec[rayo][tim].x - arrayRec[rayo][tiempo].x) / (tim - tiempo);
+                    arrayRec[rayo][t].y = arrayRec[rayo][t - 1].y + (arrayRec[rayo][tim].y - arrayRec[rayo][tiempo].y) / (tim - tiempo);
+                    arrayRec[rayo][t].z = arrayRec[rayo][t - 1].z + (arrayRec[rayo][tim].z - arrayRec[rayo][tiempo].z) / (tim - tiempo);
+                }
+                for (int j = 0; j < r.NR; j++) {
+                    mE.A[tri][tim] = eneResidual; //Energia  del rayo al receptor
                 }
                 tiempo = tim;
                 mE.A[tri][tim] += (eneResidual * (1 - alfa) * delta); //Energia difusa en los triangulos
@@ -612,7 +673,8 @@ void energytransition() {
         for (int t = 0; t < tM; t++) {
             for (int e = 0; e < NumTri; e++) {// Triángulo 1
                 for (int ed = 0; ed < NumTri; ed++) { // Triángulo 2
-                    if (e != ed) {
+                    //Energia de la los triangulos de la sala
+                    if (e != ed) { //No estan en el mismo plano
                         //Es el instante de tiempo de la simulacion + el instate de  tiempo en que ocurre la transmision de energia en ese triangulo a hacia el siguiente triangulo
                         t_vuelo = mTV.A[e][ed] + t;
                         if (t_vuelo <= tM) {
@@ -620,12 +682,26 @@ void energytransition() {
                         }
                     }
                 }
+                //Energía del Receptor
+                for (int k = 0; k < r.NR; k++) {
+                    t_vuelo = mTVR.A[k][e] + t;
+                    if (t_vuelo < tM) {
+                        mER.A[k][t_vuelo] += (mE.A[e][t] * mPER.A[k][e]);
+                    }
+                };
             }
         }
         std::cout << "Matriz de energia" << std::endl;
         for (int i = 0; i < NumTri; i++) {
             for (int j = 0; j < 15; j++) {
                 std::cout << mE.A[i][j] << " ";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << "Matriz de energia del receptor" << std::endl;
+        for (int i = 0; i < NumTri; i++) {
+            for (int j = 0; j < 15; j++) {
+                std::cout << mER.A[i][j] << " ";
             }
             std::cout << std::endl;
         }
