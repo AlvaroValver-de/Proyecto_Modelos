@@ -36,11 +36,10 @@ reflection* arrayreflecciones = NULL; //Refleciones
 point o; //Punto de origen
 point** arrayRec;  //Array Recorrido
 float elapsedTime = 0.0f;
+const int NumReceptores = 27; // Número de receptores
 
 void laodRoom();
 void energytransition();
-
-
 
 //General Settings
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -98,11 +97,14 @@ int main()
     // configure global opengl state
     // -----------------------------
     glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK); // Cull las caras traseras
 
     // build and compile shaders
     // -------------------------
     Shader room("shaders/room.vs", "shaders/room.fs");
     Shader rayo("shaders/lightcube.vs", "shaders/lightcube.fs");
+    Shader receptorShader("shaders/room.vs", "shaders/room.fs");
+
     //Se carga la sala
     laodRoom();
     float vertices1[108];
@@ -128,13 +130,21 @@ int main()
             vertices1[contradork] = r.p[i].t[j].p2.y;
             contradork++;
             vertices1[contradork] = r.p[i].t[j].p2.z;
-            contradork++;
+            contradork++;{}
 
         }
     }
+    const int numSegments = 100;
+    float vertices[numSegments * 3];
+
+    for (int i = 0; i < numSegments; i++) {
+        float angle = 2.0f * glm::pi<float>() * static_cast<float>(i) / static_cast<float>(numSegments);
+        vertices[i * 3] = std::cos(angle);
+        vertices[i * 3 + 1] = std::sin(angle);
+        vertices[i * 3 + 2] = 0.0f;
+    }
 
     energytransition();
-
 
     //Configuracion del Ambiente para el cubo y la particula
     // first, configure the cube's VAO (and VBO)
@@ -158,6 +168,24 @@ int main()
     // position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+
+    unsigned int discoVBO, discoVAO;
+    glGenVertexArrays(1, &discoVAO);
+    glGenBuffers(1, &discoVBO);
+
+    // Enlazar el VAO
+    glBindVertexArray(discoVAO);
+
+    // Enlazar y configurar el VBO
+    glBindBuffer(GL_ARRAY_BUFFER, discoVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    // Configurar atributos de vértice
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    // Desenlazar el VAO
+    glBindVertexArray(0);
 
     int tSimulacion = 0;
 
@@ -232,16 +260,11 @@ int main()
         for (int i = 0; i < r.NP; i++) {
             for (int j = 0; j < r.p[i].NT; j++) {
 
-                // Obtén el valor de energía correspondiente a este triángulo
-               // float energyValue = mE.A[cont_t][tSimulacion];
-
                 if (mE.A[cont_t][tSimulacion] != 0.0) {
                     float energyValue = float(impactosPorTriangulo[cont_t][tSimulacion]) / 50.0;
                     // Configura el color calculado en el shader basado en el valor de energía
                     r.p[i].t[j].Color.heatMapColor(float(energyValue));
                 }
-        
-
                 // Configura el color calculado en el shader
                 room.setVec3("ourColor", glm::vec3(r.p[i].t[j].Color.red, r.p[i].t[j].Color.green, r.p[i].t[j].Color.blue));
                 room.setMat4("projection", projection);
@@ -258,7 +281,7 @@ int main()
         rayo.use();
         rayo.setMat4("projection", projection);
         rayo.setMat4("view", view);
-        rayo.setVec3("ourColor", glm::vec3(0.5f, 1.0f, 0.5f));
+        rayo.setVec3("ourColor", glm::vec3(0.75f, 0.75f, 0.0f));
         model = glm::mat4(1.0f);
 
         for (int idRayo = 0; idRayo < s.NRAYS; idRayo++) {
@@ -276,12 +299,27 @@ int main()
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
+        // Renderizar el disco de los receptores
+        rayo.use();
+        rayo.setMat4("projection", projection);
+        rayo.setMat4("view", view);
+        for (int i = 0; i < NumReceptores; i++)
+        {
+            rayo.setVec3("ourColor", glm::vec3(r.r[i].Color.red, r.r[i].Color.green, r.r[i].Color.blue));
+            model = glm::mat4(1.0f); // Restablecer la matriz de modelo
+            model = glm::translate(model, glm::vec3(float(r.r[i].p.x), float(r.r[i].p.y), float(r.r[i].p.z)));
+            model = glm::scale(model, glm::vec3(0.25f));
+            rayo.setMat4("model", model);
+            glBindVertexArray(discoVAO); // Enlazar el VAO del disco
+            glDrawArrays(GL_TRIANGLE_FAN, 0, numSegments); // Dibujar el disco
+            glBindVertexArray(0); // Desenlazar el VAO del disco
+           
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
 
     }
-
 
     // optional: de-allocate all resources once they've outlived their purpose:
 // ------------------------------------------------------------------------
@@ -300,7 +338,6 @@ void processInput(GLFWwindow* window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
-
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         camera.ProcessKeyboard(FORWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -450,11 +487,13 @@ void laodRoom() {
             }
         }
         NumTri = cont_t;  // Asigna el número total de triángulos.
+
         //Inicializacion de las matrices
         mD.Init(NumTri, NumTri);
         mTV.Init(NumTri, NumTri);;
         mAS.Init(NumTri, NumTri);
         mPE.Init(NumTri, NumTri);
+
         int cont = 0;
         double* suma_angulos_solidos = new double[NumTri](); //arreglo para optener la sunma de las areas de los angulos solidos
         //Ciclo para el calculo de las matriz de distacia, tiempo de vuelo y angulos solidos
@@ -508,6 +547,20 @@ void laodRoom() {
         //libera la memoria
         delete[] suma_angulos_solidos;
 
+        // CREACIÓN DE RECEPTORES 
+        r.NewReceptor(NumReceptores);
+        int cont_rec = 0;
+        for (int i = -1; i < 2; i++) {
+            for (int j = -1; j < 2; j++) {
+                for (int k = -1; k < 2; k++) {
+                    r.r[cont_rec].p.x = float(i);
+                    r.r[cont_rec].p.y = float(j);
+                    r.r[cont_rec].p.z = float(k);
+                    cont_rec++;
+                }
+            }
+        }
+
         loadedRoom = true; // Indica que la habitación ha sido cargada exitosamente.
     }
 }
@@ -554,7 +607,6 @@ void energytransition() {
                 eneResidual = eneResidual * (1 - alfa) * (1 - delta); //Energia incidente de los rayos
             }
         }
-
 
         //Transicion de energia en la matriz esapcio tiempo mE
         for (int t = 0; t < tM; t++) {
