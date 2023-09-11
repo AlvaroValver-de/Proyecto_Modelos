@@ -661,7 +661,7 @@ void energytransition() {
                     arrayRec[rayo][t].z = arrayRec[rayo][t - 1].z + (arrayRec[rayo][tim].z - arrayRec[rayo][tiempo].z) / (tim - tiempo);
                 }
                 for (int j = 0; j < r.NR; j++) {
-                    mE.A[tri][tim] = eneResidual; //Energia  del rayo al receptor
+                    mER.A[tri][tim] = eneResidual; //Energia  del rayo al receptor
                 }
                 tiempo = tim;
                 mE.A[tri][tim] += (eneResidual * (1 - alfa) * delta); //Energia difusa en los triangulos
